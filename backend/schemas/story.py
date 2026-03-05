@@ -1,48 +1,40 @@
-from typing import List , Dict , Optional
+from typing import List, Dict, Optional
 from datetime import datetime
-from pydantic import BaseModel
-
-class StoryOptionsSchema(BaseModel):
-    text:  str
-    node_id: Optional[int]= None
+from pydantic import BaseModel, field_validator
 
 
+class StoryOptionSchema(BaseModel):
+    text: str
+    node_id: Optional[int] = None
 
-class StoryNodeBase(BaseModel):
+
+class StoryNodeResponse(BaseModel):
+    id: int
     content: str
     is_ending: bool = False
     is_winning_ending: bool = False
+    options: List[StoryOptionSchema] = []
 
-
-
-class CompleteStoryNodeResponse(StoryNodeBase):
-    id: int
-    options: List[StoryOptionsSchema]=[]
-
-    class Config:
-        from_attributes = True
-
-
-
-class StoryBase(BaseModel):
-    title: str
-    session_id: Optional[str] = None
-
-    class Config:
-        from_attributes = True
-
+    model_config = {"from_attributes": True}
 
 
 class CreateStoryRequest(BaseModel):
     theme: str
 
+    @field_validator("theme")
+    @classmethod
+    def theme_must_not_be_empty(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("Theme cannot be empty or whitespace")
+        return v.strip()
 
 
-class CompleteStoryResponse(StoryBase):
+class StoryResponse(BaseModel):
     id: int
-    createdAt: datetime
-    root_node: CompleteStoryNodeResponse
-    all_nodes: Dict[int, CompleteStoryNodeResponse]
+    title: str
+    session_id: Optional[str] = None
+    created_at: datetime
+    root_node: StoryNodeResponse
+    all_nodes: Dict[int, StoryNodeResponse]
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}

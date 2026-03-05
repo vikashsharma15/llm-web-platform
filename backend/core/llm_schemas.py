@@ -1,10 +1,13 @@
-from typing import List, Dict, Any, Optional
+from typing import List, Optional, Any, Dict
 from pydantic import BaseModel, Field
 
 
+# Pointer #10 — LLM response ke liye alag schemas
+# SQLAlchemy models se alag — yeh sirf OpenAI response parse karta hai
+
 class StoryOptionLLM(BaseModel):
-    text: str = Field(description="the text of the option shown to the user")
-    nextNode: Dict[str, Any] = Field(description="the next node content and its options")
+    text: str = Field(description="The text of the option shown to the user")
+    nextNode: Dict[str, Any] = Field(description="The next node content and its options")
 
 
 class StoryNodeLLM(BaseModel):

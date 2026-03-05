@@ -1,24 +1,26 @@
 from typing import Optional
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
-class StoryJobBase(BaseModel):
+class StoryJobCreate(BaseModel):
     theme: str
 
+    @field_validator("theme")
+    @classmethod
+    def theme_must_not_be_empty(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("Theme cannot be empty or whitespace")
+        return v.strip()
 
-class  StoryJobResponse(StoryJobBase):
+
+class StoryJobResponse(BaseModel):
     job_id: str
+    theme: str
     status: str
-    created_at: datetime
-    story_id: Optional[int]= None
-    completed_at:  Optional[datetime]= None
+    story_id: Optional[int] = None
     error: Optional[str] = None
+    created_at: datetime
+    completed_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
-
-
-class StoryJobCreate(StoryJobBase):
-    pass
-
+    model_config = {"from_attributes": True}
