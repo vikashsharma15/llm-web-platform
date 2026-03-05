@@ -1,12 +1,19 @@
+import logging
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 from core.config import get_settings
 from db.database import create_tables
-from routers.api import api_router
+from routers.router_registry import register_routers
 from middlewares import register_middlewares
 
+# Logging configuration — shows all INFO logs in console
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+)
+
+logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
@@ -19,21 +26,9 @@ def create_app() -> FastAPI:
         redoc_url="/redocs",
     )
 
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.allowed_origins_list,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-
-    # Pointer #2 #9 — ek line mein sab middlewares register
-    register_middlewares(app)
-
-    # Pointer #4 — sirf ek router
-    app.include_router(api_router)
-
-    create_tables()
+    register_middlewares(app)  # CORS + all exception handlers
+    register_routers(app)      # all routers
+    create_tables()            # ✅ app ke andar — startup pe DB ready
 
     return app
 

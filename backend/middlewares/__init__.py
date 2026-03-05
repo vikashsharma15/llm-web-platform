@@ -1,14 +1,31 @@
 from fastapi import FastAPI
-from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError, HTTPException
 from sqlalchemy.exc import SQLAlchemyError
 
-from middlewares.request_validator import validation_exception_middleware
-from middlewares.error_handler import db_exception_middleware, global_exception_middleware
+from core.config import get_settings
+from middlewares.response_helper import validation_exception_middleware
+from middlewares.exception_middleware import (
+    db_exception_middleware,
+    http_exception_middleware,
+    global_exception_middleware,
+)
+
+settings = get_settings()
 
 
-# Pointer #2 #9 — Register karo sirf ek baar main.py mein
-# app.register_middlewares(app) — bas itna kafi hai
 def register_middlewares(app: FastAPI) -> None:
+    # CORS
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.allowed_origins_list,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    # Exception handlers
     app.add_exception_handler(RequestValidationError, validation_exception_middleware)
+    app.add_exception_handler(HTTPException, http_exception_middleware)
     app.add_exception_handler(SQLAlchemyError, db_exception_middleware)
     app.add_exception_handler(Exception, global_exception_middleware)

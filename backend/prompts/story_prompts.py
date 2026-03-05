@@ -1,7 +1,4 @@
 class StoryPrompts:
-
-    # Pointer #10 — tera original prompt yahan aaya, core/prompts.py se move kiya
-    # Pointer #11 — prompt ek jagah define, LLM baar baar call nahi hoga
     STORY_PROMPT = (
         "You are a creative story writer that creates engaging choose-your-own-adventure stories.\n"
         "Generate a complete branching story with multiple paths and endings in the JSON format I'll specify.\n\n"

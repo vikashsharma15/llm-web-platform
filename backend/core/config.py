@@ -3,6 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    """App configuration loaded from .env file."""
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -18,6 +19,7 @@ class Settings(BaseSettings):
 
     @property
     def allowed_origins_list(self) -> list[str]:
+        """Converts comma-separated ALLOWED_ORIGINS string to a list."""
         return [
             origin.strip()
             for origin in self.ALLOWED_ORIGINS.split(",")
@@ -27,4 +29,5 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
+    """Returns cached settings instance — reads .env only once."""
     return Settings()

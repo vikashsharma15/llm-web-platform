@@ -1,36 +1,33 @@
-import logging
-
 from fastapi import status
 from fastapi.responses import JSONResponse
 
-from schemas.job import StoryJobResponse
+from schemas.job_schema import StoryJobResponse
 from services.job_service import JobService
-from middlewares.response_formatter import format_response
-
-logger = logging.getLogger(__name__)
+from middlewares.response_formatter import success_response
 
 
 class JobController:
+    """
+    Handles HTTP request/response logic for job-related endpoints.
+    Does not contain business logic — delegates to JobService.
+    """
 
     def __init__(self, job_service: JobService):
+        """
+        Injects JobService via dependency injection.
+        Controller has no direct access to DB.
+        """
         self.job_service = job_service
 
     def get_job_status(self, job_id: str) -> JSONResponse:
-        try:
-            job = self.job_service.get_job(job_id)
-            return format_response(
-                status_code=status.HTTP_200_OK,
-                message="Job fetched successfully",
-                data=StoryJobResponse.model_validate(job).model_dump(mode="json"),
-            )
-        except ValueError as e:
-            return format_response(
-                status_code=status.HTTP_404_NOT_FOUND,
-                message=str(e),
-            )
-        except Exception as e:
-            logger.error(f"Error fetching job {job_id}: {e}")
-            return format_response(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                message="Failed to fetch job",
-            )
+        """
+        Fetches the current status of a story generation job by job_id.
+        Returns job details including status, story_id, and error if any.
+        Raises 404 via JobService if job not found.
+        """
+        job = self.job_service.get_job(job_id)
+        return success_response(
+            status_code=status.HTTP_200_OK,
+            message="Job fetched successfully",
+            data=StoryJobResponse.model_validate(job).model_dump(mode="json"),
+        )
