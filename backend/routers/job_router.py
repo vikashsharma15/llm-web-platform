@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
 from controllers.job_controller import JobController
-from routers.dependencies import get_job_controller
+from dependencies import get_job_controller
 
 # Module level — created once on app startup, not on every request
 router = APIRouter()

@@ -9,13 +9,26 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=True,
+        extra="ignore",
     )
 
-    API_PREFIX: str = "/api"
+    # ─── App ───────────────────────────────────────────
+    APP_TITLE: str = "Choose Your Own Adventure API"
+    APP_DESCRIPTION: str = "API to generate cool stories based on user input"
+    APP_VERSION: str = "0.1.0"
     DEBUG: bool = False
+    HOST: str = "localhost"
+    PORT: int = 8000
+    API_PREFIX: str = "/api" 
+
+    # ─── Database ──────────────────────────────────────
     DATABASE_URL: str
-    OPENAI_API_KEY: str
+
+    # ─── Security ──────────────────────────────────────
     ALLOWED_ORIGINS: str = ""
+
+    # ─── LLM ───────────────────────────────────────────
+    OPENAI_API_KEY: str
 
     @property
     def allowed_origins_list(self) -> list[str]:

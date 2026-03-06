@@ -1,8 +1,8 @@
 fastapi[all]>=0.133.0
 langchain>=1.2.10
-langchain-groq>=1.1.2
+##langchain-groq>=1.1.2
 
 psycopg2-binary>=2.9.11
 python-dotenv>=1.2.1
 sqlalchemy>=2.0.47
-uvicorn>=0.41.0
+uvicorn>=0.41.0 

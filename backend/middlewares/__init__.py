@@ -4,7 +4,7 @@ from fastapi.exceptions import RequestValidationError, HTTPException
 from sqlalchemy.exc import SQLAlchemyError
 
 from core.config import get_settings
-from middlewares.response_helper import validation_exception_middleware
+from middlewares.validation_middleware import validation_exception_middleware
 from middlewares.exception_middleware import (
     db_exception_middleware,
     http_exception_middleware,

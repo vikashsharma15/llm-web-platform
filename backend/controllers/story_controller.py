@@ -9,7 +9,7 @@ from schemas.story_schema import CreateStoryRequest, StoryResponse
 from schemas.job_schema import StoryJobResponse
 from services.job_service import JobService
 from services.story_service import StoryService
-from middlewares.response_formatter import success_response
+from utils.response_helper  import success_response
 
 logger = logging.getLogger(__name__)
 

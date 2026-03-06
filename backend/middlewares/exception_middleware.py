@@ -3,7 +3,7 @@ from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
 from sqlalchemy.exc import SQLAlchemyError
-from middlewares.response_helper import error_response
+from middlewares.validation_middleware import error_response
 
 logger = logging.getLogger(__name__)
 

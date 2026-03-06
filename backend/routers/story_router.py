@@ -3,7 +3,8 @@ from fastapi.responses import JSONResponse
 
 from schemas.story_schema import CreateStoryRequest
 from controllers.story_controller import StoryController, get_session_id
-from routers.dependencies import get_story_controller
+from dependencies import get_story_controller
+
 
 # Module level — created once on app startup, not on every request
 router = APIRouter()

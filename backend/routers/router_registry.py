@@ -1,6 +1,11 @@
 from fastapi import FastAPI, APIRouter
+
+from core.config import get_settings
 from routers.job_router import router as job_router
 from routers.story_router import router as story_router
+
+settings = get_settings()
+
 
 # To add a new router, just add an entry here — nothing else changes
 ROUTERS = [
@@ -8,8 +13,8 @@ ROUTERS = [
     {"router": job_router,   "prefix": "/jobs",    "tags": ["Jobs"]},
 ]
 
-# Module-level router — created once, not on every request
-api_router = APIRouter(prefix="/api")
+# Module-level router — prefix from .env API_PREFIX
+api_router = APIRouter(prefix=settings.API_PREFIX)
 
 for route in ROUTERS:
     api_router.include_router(

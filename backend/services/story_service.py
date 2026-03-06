@@ -20,6 +20,8 @@ class StoryService:
         """
         Fetches story with all nodes and assembles into StoryResponse.
         Pointer #2 — raises HTTPException if story or nodes not found.
+        session_id excluded from response — internal field only.
+        root_node excluded from nodes dict — no duplicate data sent to client.
         """
         story = self.repo.get_story_by_id(story_id)
         if not story:
@@ -35,7 +37,15 @@ class StoryService:
                 detail=f"No nodes found for story {story_id}",
             )
 
-        # Build a node map for quick lookup by node ID
+        # Find root node — entry point of the story
+        root_node = next((n for n in nodes if n.is_root), None)
+        if not root_node:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Root node not found for story {story_id}",
+            )
+
+        # Build node map — exclude root to avoid duplicate data in response
         node_map: dict[int, StoryNodeResponse] = {
             node.id: StoryNodeResponse(
                 id=node.id,
@@ -45,21 +55,19 @@ class StoryService:
                 options=[StoryOptionSchema(**opt) for opt in (node.options or [])],
             )
             for node in nodes
+            if not node.is_root  # root excluded — sent separately
         }
-
-        # Find root node — entry point of the story
-        root_node = next((n for n in nodes if n.is_root), None)
-        if not root_node:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Root node not found for story {story_id}",
-            )
 
         return StoryResponse(
             id=story.id,
             title=story.title,
-            session_id=story.session_id,
-            created_at=story.created_at,
-            root_node=node_map[root_node.id],
-            all_nodes=node_map,
+            created_at=story.created_at,  # session_id excluded — internal only
+            root_node=StoryNodeResponse(
+                id=root_node.id,
+                content=root_node.content,
+                is_ending=root_node.is_ending,
+                is_winning_ending=root_node.is_winning_ending,
+                options=[StoryOptionSchema(**opt) for opt in (root_node.options or [])],
+            ),
+            nodes=node_map,
         )
