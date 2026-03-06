@@ -8,7 +8,7 @@ from langchain_core.output_parsers import PydanticOutputParser
 from core.config import get_settings
 from models.story import Story, StoryNode
 from schemas.llm_schema import StoryLLMResponse, StoryNodeLLM
-from prompts.story_prompts import StoryPrompts  # Pointer #10
+from prompts.story_prompts import StoryPrompts 
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -32,7 +32,7 @@ class StoryGenerator:
     def _build_messages(cls, theme: str) -> list:
         """
         Builds message list for LLM invocation.
-        Pointer #10 — uses pre-formatted prompt from StoryPrompts.
+        uses pre-formatted prompt from StoryPrompts.
         JSON structure already injected via get_formatted_prompt().
         """
         return [
@@ -44,7 +44,7 @@ class StoryGenerator:
     def generate_story(cls, db: Session, session_id: str, theme: str = "fantasy") -> Story:
         """
         Calls LLM to generate a branching story, then persists to DB.
-        Pointer #11 — only called on cache miss, never on every request.
+        only called on cache miss, never on every request.
         Retries up to MAX_RETRIES on null or invalid JSON response.
         """
         llm = cls._get_llm()
@@ -89,7 +89,7 @@ class StoryGenerator:
             story_db = Story(
                 title=story_structure.title,
                 session_id=session_id,
-                theme=theme,  # Pointer #11 — saved for cache lookup
+                theme=theme,  # — saved for cache lookup
             )
             db.add(story_db)
             db.flush()

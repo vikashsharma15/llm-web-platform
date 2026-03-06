@@ -24,8 +24,8 @@ class StoryNodeResponse(BaseModel):
 class CreateStoryRequest(BaseModel):
     """
     Request schema for creating a story.
-    Pointer #3 — Pydantic validates input before it reaches the controller.
-    Pointer #9 — validation errors caught by validation_middleware.
+    Pydantic validates input before it reaches the controller.
+    validation errors caught by validation_middleware.
     """
     theme: str
 
