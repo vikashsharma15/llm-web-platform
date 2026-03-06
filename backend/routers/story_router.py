@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, BackgroundTasks, Response
+from fastapi import APIRouter, Depends, BackgroundTasks
 from fastapi.responses import JSONResponse
 
 from schemas.story_schema import CreateStoryRequest
-from controllers.story_controller import StoryController, get_session_id
+from controllers.story_controller import StoryController
 from dependencies import get_story_controller
 from utils.constants import StatusCode
 
@@ -13,16 +13,12 @@ router = APIRouter()
 def create_story(
     request: CreateStoryRequest,
     background_tasks: BackgroundTasks,
-    response: Response,
-    session_id: str = Depends(get_session_id),
     controller: StoryController = Depends(get_story_controller),
 ) -> JSONResponse:
     """Creates a story job and queues LLM generation in background."""
     return controller.create_story(
         request=request,
         background_tasks=background_tasks,
-        response=response,
-        session_id=session_id,
     )
 
 

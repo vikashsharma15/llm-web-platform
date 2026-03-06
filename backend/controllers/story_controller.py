@@ -1,8 +1,7 @@
 import uuid
 import logging
-from typing import Optional
 
-from fastapi import Cookie, Response, BackgroundTasks
+from fastapi import BackgroundTasks
 from fastapi.responses import JSONResponse
 
 from schemas.story_schema import CreateStoryRequest
@@ -13,13 +12,6 @@ from utils.response_helper import success_response
 from utils.constants import StatusCode, Messages
 
 logger = logging.getLogger(__name__)
-
-
-def get_session_id(session_id: Optional[str] = Cookie(None)) -> str:
-    """Reads session_id from cookie — generates new UUID if not present."""
-    if not session_id:
-        return str(uuid.uuid4())
-    return session_id
 
 
 class StoryController:
@@ -34,23 +26,21 @@ class StoryController:
         self,
         request: CreateStoryRequest,
         background_tasks: BackgroundTasks,
-        response: Response,
-        session_id: str,
     ) -> JSONResponse:
         """
         Creates a story job and queues LLM generation in background.
         Returns 202 immediately — client polls job status for completion.
+        session_id generated server-side — never exposed to client.
         """
-        # Set session cookie so frontend can track the user session
-        response.set_cookie(key="session_id", value=session_id, httponly=True)
+        # Server generates session_id — user never sees or manages this
+        session_id = str(uuid.uuid4())
 
-        # Create a pending job in DB — no LLM call yet
         job = self.job_service.create_job(
             theme=request.theme,
             session_id=session_id,
         )
 
-        # Queue LLM story generation in background — request returns immediately
+        # Queue LLM story generation — request returns immediately
         background_tasks.add_task(
             self.job_service.process_story_job,
             job_id=job.job_id,

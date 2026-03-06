@@ -24,8 +24,8 @@ class StoryNodeResponse(BaseModel):
 class CreateStoryRequest(BaseModel):
     """
     Request schema for creating a story.
-    Pydantic validates input before it reaches the controller.
-    validation errors caught by validation_middleware.
+    Pointer #3 — Pydantic validates input before it reaches the controller.
+    Pointer #9 — validation errors caught by validation_middleware.
     """
     theme: str
 
@@ -33,8 +33,9 @@ class CreateStoryRequest(BaseModel):
     @classmethod
     def validate_theme(cls, v: str) -> str:
         """
-        Validates theme — rejects gibberish before wasting an LLM call.
-        Allows minor typos (aapplee, spce) — LLM will auto-correct these.
+        Validates theme — rejects clear gibberish before wasting an LLM call.
+        Intentionally lenient — allows typos and real words like Globetrotter.
+        LLM handles typo correction via prompt instructions.
         """
         # Empty check before strip — catches ""
         if not v:
@@ -45,50 +46,40 @@ class CreateStoryRequest(BaseModel):
             raise ValueError("Theme cannot be whitespace only")
 
         v = v.strip()
-        clean = v.replace(" ", "").lower()
 
         if len(v) < 3:
             raise ValueError("Theme must be at least 3 characters long")
+
         if len(v) > 30:
             raise ValueError("Theme must be at most 30 characters long")
 
-        # Only letters, numbers and spaces
+        # Only letters, numbers and spaces — no special chars
         if not re.match(r'^[a-zA-Z0-9\s]+$', v):
             raise ValueError("Theme must contain only letters, numbers and spaces")
 
         words = v.split()
 
-        # Max 3 words
+        # Max 3 words — "dark fantasy forest" ok, "a b c d e" not
         if len(words) > 3:
             raise ValueError("Theme must be at most 3 words")
-
-        # Each word max 12 chars — catches "bikecyclebikecykle"
-        for word in words:
-            if len(word) > 12:
-                raise ValueError("Each word must be at most 12 characters")
 
         # No duplicate words — catches "space space"
         if len(words) != len(set(w.lower() for w in words)):
             raise ValueError("Theme must not contain duplicate words")
 
-        # Exact repeating pattern — catches "ankitankit", "anacondaanaconda"
-        if re.search(r'(.{2,})\1+', clean):
+        # Repeating pattern 4+ chars — catches "ankitankit", "anacondaanaconda"
+        # 4+ threshold allows real words like "Mississippi", "Globetrotter"
+        clean = v.replace(" ", "").lower()
+        if re.search(r'(.{4,})\1+', clean):
             raise ValueError("Theme looks like gibberish — please enter a valid theme")
 
-        # 4+ consecutive same chars — catches "aaaaaaa"
-        if re.search(r'(.)\1{3,}', v):
+        # 4+ consecutive same chars — catches "aaaaaaa", "lllzzz"
+        if re.search(r'(.)\1{4,}', v):
             raise ValueError("Theme looks like gibberish — please enter a valid theme")
 
-        # No vowels — catches "dhfghskgfjh"
+        # No vowels at all — catches "dhfghskgfjh", "zxcvbn"
         if not re.search(r'[aeiouAEIOU]', v):
             raise ValueError("Theme must contain at least one vowel")
-
-        # Low uniqueness ratio for 8+ char strings — catches "vikashvikas"
-        # Only for longer strings — short typos like "aapplee" are allowed
-        if len(clean) >= 8:
-            ratio = len(set(clean)) / len(clean)
-            if ratio < 0.6:
-                raise ValueError("Theme looks like gibberish — please enter a valid theme")
 
         return v
 
