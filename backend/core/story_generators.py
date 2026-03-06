@@ -1,8 +1,8 @@
+import json
 import logging
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 from langchain_groq import ChatGroq
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 
 from core.config import get_settings
@@ -13,40 +13,79 @@ from prompts.story_prompts import StoryPrompts  # Pointer #10
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
+# 3 retries — balances reliability vs API cost
+MAX_RETRIES = 3
+
 
 class StoryGenerator:
     """Handles LLM story generation and persists result to DB."""
 
     @classmethod
     def _get_llm(cls) -> ChatGroq:
-        """Creates LLM instance using API key from settings."""
-        # Pointer #11 — LLM instance created only when needed, not on every request
+        """Creates LLM instance — uses API key from settings."""
         return ChatGroq(
             model="llama-3.3-70b-versatile",
             api_key=settings.OPENAI_API_KEY,
         )
 
     @classmethod
+    def _build_messages(cls, theme: str) -> list:
+        """
+        Builds message list for LLM invocation.
+        Pointer #10 — uses pre-formatted prompt from StoryPrompts.
+        JSON structure already injected via get_formatted_prompt().
+        """
+        return [
+            {"role": "system", "content": StoryPrompts.get_formatted_prompt()},
+            {"role": "user",   "content": f"Create the story with this theme: {theme}"},
+        ]
+
+    @classmethod
     def generate_story(cls, db: Session, session_id: str, theme: str = "fantasy") -> Story:
         """
-        Calls LLM to generate a story, then saves it to DB.
-        Pointer #11 — called only from background task, never on every request.
+        Calls LLM to generate a branching story, then persists to DB.
+        Pointer #11 — only called on cache miss, never on every request.
+        Retries up to MAX_RETRIES on null or invalid JSON response.
         """
+        llm = cls._get_llm()
+        story_parser = PydanticOutputParser(pydantic_object=StoryLLMResponse)
+        messages = cls._build_messages(theme)
+
+        story_structure = None
+        last_error = None
+
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                logger.info(f"LLM attempt {attempt}/{MAX_RETRIES} for theme: '{theme}'")
+
+                raw_response = llm.invoke(messages)
+                response_text = raw_response.content if hasattr(raw_response, "content") else str(raw_response)
+
+                # Guard — null or empty response
+                if not response_text or response_text.strip() in ("null", "", "None"):
+                    logger.warning(f"LLM returned empty response on attempt {attempt} — retrying")
+                    continue
+
+                # Guard — invalid JSON before Pydantic parse
+                try:
+                    json.loads(response_text)
+                except json.JSONDecodeError as e:
+                    logger.warning(f"Invalid JSON on attempt {attempt}: {e} — retrying")
+                    continue
+
+                story_structure = story_parser.parse(response_text)
+                logger.info(f"LLM parse success on attempt {attempt}")
+                break
+
+            except Exception as e:
+                last_error = e
+                logger.warning(f"LLM attempt {attempt} failed: {e}")
+                continue
+
+        if not story_structure:
+            raise ValueError(f"LLM failed after {MAX_RETRIES} attempts. Last error: {last_error}")
+
         try:
-            llm = cls._get_llm()
-            story_parser = PydanticOutputParser(pydantic_object=StoryLLMResponse)
-
-            # Pointer #10 — prompt from StoryPrompts, not hardcoded here
-            prompt = ChatPromptTemplate.from_messages([
-                ("system", StoryPrompts.STORY_PROMPT),
-                ("human", f"Create the story with this theme: {theme}"),
-            ]).partial(format_instructions=story_parser.get_format_instructions())
-
-            raw_response = llm.invoke(prompt.invoke({}))
-            response_text = raw_response.content if hasattr(raw_response, "content") else raw_response
-            story_structure = story_parser.parse(response_text)
-
-            # Pointer #6 — DB error handling
             story_db = Story(
                 title=story_structure.title,
                 session_id=session_id,
@@ -62,16 +101,16 @@ class StoryGenerator:
             cls._process_story_node(db, story_db.id, root_node_data, is_root=True)
 
             db.commit()
-            logger.info(f"Story generated for theme: '{theme}', ID: {story_db.id}")
+            logger.info(f"Story saved — theme: '{theme}', ID: {story_db.id}")
             return story_db
 
         except SQLAlchemyError as e:
             db.rollback()
-            logger.error(f"DB error while saving story: {e}")
+            logger.error(f"DB error saving story: {e}")
             raise
         except Exception as e:
             db.rollback()
-            logger.error(f"LLM error generating story: {e}")
+            logger.error(f"Error saving story: {e}")
             raise
 
     @classmethod
@@ -84,7 +123,7 @@ class StoryGenerator:
     ) -> StoryNode:
         """
         Recursively saves story nodes to DB.
-        Builds options list with child node references.
+        Builds options list with child node IDs.
         """
         def get(obj, key):
             """Gets attribute from object or dict key."""

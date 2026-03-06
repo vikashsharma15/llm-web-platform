@@ -3,12 +3,13 @@ from fastapi.responses import JSONResponse
 
 from controllers.job_controller import JobController
 from dependencies import get_job_controller
+from utils.constants import StatusCode
 
-# Module level — created once on app startup, not on every request
+# No prefix/tags here — defined in router_registry.py
 router = APIRouter()
 
 
-@router.get("/{job_id}", status_code=200)
+@router.get("/{job_id}", status_code=StatusCode.OK)
 def get_job_status(
     job_id: str,
     controller: JobController = Depends(get_job_controller),

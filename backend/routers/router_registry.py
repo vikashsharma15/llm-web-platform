@@ -1,29 +1,25 @@
 from fastapi import FastAPI, APIRouter
 
 from core.config import get_settings
+from utils.constants import RouterConfig
 from routers.job_router import router as job_router
 from routers.story_router import router as story_router
 
 settings = get_settings()
 
-
-# To add a new router, just add an entry here — nothing else changes
+# Add new router here only — nothing else changes
 ROUTERS = [
-    {"router": story_router, "prefix": "/stories", "tags": ["Stories"]},
-    {"router": job_router,   "prefix": "/jobs",    "tags": ["Jobs"]},
+    (story_router, RouterConfig.STORIES_PREFIX, [RouterConfig.STORIES_TAG]),
+    (job_router,   RouterConfig.JOBS_PREFIX,    [RouterConfig.JOBS_TAG])
 ]
 
-# Module-level router — prefix from .env API_PREFIX
+# Module level — built once on app startup
 api_router = APIRouter(prefix=settings.API_PREFIX)
 
-for route in ROUTERS:
-    api_router.include_router(
-        route["router"],
-        prefix=route["prefix"],
-        tags=route["tags"],
-    )
+for router, prefix, tags in ROUTERS:
+    api_router.include_router(router, prefix=prefix, tags=tags)
 
 
 def register_routers(app: FastAPI) -> None:
-    """Registers all API routers onto the FastAPI app."""
+    """Mounts the pre-built api_router onto the FastAPI app."""
     app.include_router(api_router)

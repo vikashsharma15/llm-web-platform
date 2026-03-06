@@ -43,7 +43,7 @@ class StoryPrompts:
         "- Every option text must be a complete, descriptive sentence"
     )
 
-    # Pointer #10 — JSON structure defined here, not in story_generators.py
+
     JSON_STRUCTURE = (
         '{\n'
         '    "title": "Story Title",\n'

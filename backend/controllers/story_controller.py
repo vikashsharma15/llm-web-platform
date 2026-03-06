@@ -2,40 +2,31 @@ import uuid
 import logging
 from typing import Optional
 
-from fastapi import Cookie, Response, BackgroundTasks, status
+from fastapi import Cookie, Response, BackgroundTasks
 from fastapi.responses import JSONResponse
 
-from schemas.story_schema import CreateStoryRequest, StoryResponse
+from schemas.story_schema import CreateStoryRequest
 from schemas.job_schema import StoryJobResponse
 from services.job_service import JobService
 from services.story_service import StoryService
-from utils.response_helper  import success_response
+from utils.response_helper import success_response
+from utils.constants import StatusCode, Messages
 
 logger = logging.getLogger(__name__)
 
 
 def get_session_id(session_id: Optional[str] = Cookie(None)) -> str:
-    """
-    Reads session_id from cookie.
-    If not present, generates a new UUID as session_id.
-    Used as a FastAPI dependency in the router.
-    """
+    """Reads session_id from cookie — generates new UUID if not present."""
     if not session_id:
         return str(uuid.uuid4())
     return session_id
 
 
 class StoryController:
-    """
-    Handles HTTP request/response logic for story-related endpoints.
-    Does not contain business logic — delegates to services.
-    """
+    """Handles HTTP request/response logic for story-related endpoints."""
 
     def __init__(self, job_service: JobService, story_service: StoryService):
-        """
-        Injects JobService and StoryService via dependency injection.
-        Controller has no direct access to DB.
-        """
+        """Injects JobService and StoryService via dependency injection."""
         self.job_service = job_service
         self.story_service = story_service
 
@@ -48,10 +39,7 @@ class StoryController:
     ) -> JSONResponse:
         """
         Creates a story job and queues LLM generation in background.
-        1. Sets session cookie on response.
-        2. Creates a pending job via JobService.
-        3. Adds story generation as a background task (non-blocking).
-        4. Returns 202 Accepted with job details immediately.
+        Returns 202 immediately — client polls job status for completion.
         """
         # Set session cookie so frontend can track the user session
         response.set_cookie(key="session_id", value=session_id, httponly=True)
@@ -71,19 +59,16 @@ class StoryController:
         )
 
         return success_response(
-            status_code=status.HTTP_202_ACCEPTED,
-            message="Story job accepted, processing in background",
+            status_code=StatusCode.ACCEPTED,
+            message=Messages.JOB_ACCEPTED,
             data=StoryJobResponse.model_validate(job).model_dump(mode="json"),
         )
 
     def get_complete_story(self, story_id: int) -> JSONResponse:
-        """
-        Fetches a complete story with all nodes by story ID.
-        Delegates to StoryService — raises 404 if not found.
-        """
+        """Fetches a complete story with all nodes by story ID."""
         story = self.story_service.get_complete_story(story_id)
         return success_response(
-            status_code=status.HTTP_200_OK,
-            message="Story fetched successfully",
+            status_code=StatusCode.OK,
+            message=Messages.STORY_FETCHED,
             data=story.model_dump(mode="json"),
         )

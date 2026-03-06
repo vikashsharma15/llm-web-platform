@@ -1,33 +1,23 @@
-from fastapi import status
 from fastapi.responses import JSONResponse
 
 from schemas.job_schema import StoryJobResponse
 from services.job_service import JobService
-from utils.response_helper  import success_response
+from utils.response_helper import success_response
+from utils.constants import StatusCode, Messages
 
 
 class JobController:
-    """
-    Handles HTTP request/response logic for job-related endpoints.
-    Does not contain business logic — delegates to JobService.
-    """
+    """Handles HTTP request/response logic for job-related endpoints."""
 
     def __init__(self, job_service: JobService):
-        """
-        Injects JobService via dependency injection.
-        Controller has no direct access to DB.
-        """
+        """Injects JobService via dependency injection."""
         self.job_service = job_service
 
     def get_job_status(self, job_id: str) -> JSONResponse:
-        """
-        Fetches the current status of a story generation job by job_id.
-        Returns job details including status, story_id, and error if any.
-        Raises 404 via JobService if job not found.
-        """
+        """Fetches current status of a story generation job by job_id."""
         job = self.job_service.get_job(job_id)
         return success_response(
-            status_code=status.HTTP_200_OK,
-            message="Job fetched successfully",
+            status_code=StatusCode.OK,
+            message=Messages.JOB_FETCHED,
             data=StoryJobResponse.model_validate(job).model_dump(mode="json"),
         )

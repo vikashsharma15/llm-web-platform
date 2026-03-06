@@ -1,9 +1,11 @@
 import logging
-from fastapi import Request, status
+from fastapi import Request
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
 from sqlalchemy.exc import SQLAlchemyError
-from middlewares.validation_middleware import error_response
+
+from utils.response_helper import error_response
+from utils.constants import StatusCode, Messages
 
 logger = logging.getLogger(__name__)
 
@@ -12,8 +14,8 @@ async def db_exception_middleware(request: Request, exc: SQLAlchemyError) -> JSO
     """Catches SQLAlchemy errors — returns 500 with DB error message."""
     logger.error(f"DB error on {request.url}: {exc}", exc_info=True)
     return error_response(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        message="Database error occurred",
+        status_code=StatusCode.SERVER_ERROR,
+        message=Messages.DB_ERROR,
         data={"detail": str(exc)},
     )
 
@@ -38,7 +40,7 @@ async def global_exception_middleware(request: Request, exc: Exception) -> JSONR
     settings = get_settings()
 
     return error_response(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        message="Something went wrong",
+        status_code=StatusCode.SERVER_ERROR,
+        message=Messages.SERVER_ERROR,
         data={"detail": str(exc)} if settings.DEBUG else None,
     )

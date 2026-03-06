@@ -23,7 +23,7 @@ class Base(DeclarativeBase):
 def get_db():
     """
     FastAPI dependency — provides DB session per request.
-    Pointer #6 — rolls back on error, always closes session.
+    rolls back on error, always closes session.
     """
     db = SessionLocal()
     try:

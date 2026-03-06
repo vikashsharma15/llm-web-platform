@@ -11,7 +11,7 @@ class Story(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, index=True)                     # LLM generated story title
-    theme = Column(String, index=True)                     # used for cache lookup — Pointer #11
+    theme = Column(String, index=True)                     # used for cache lookup 
     session_id = Column(String, index=True)                # links story to user session
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

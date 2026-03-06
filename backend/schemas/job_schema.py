@@ -6,7 +6,7 @@ from pydantic import BaseModel
 class StoryJobResponse(BaseModel):
     """
     Response schema for story job status.
-    Pointer #9 — consistent response format across all endpoints.
+    consistent response format across all endpoints.
     Note: StoryJobCreate removed — CreateStoryRequest in story.py handles input validation.
     """
 

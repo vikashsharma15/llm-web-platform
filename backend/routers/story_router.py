@@ -4,13 +4,12 @@ from fastapi.responses import JSONResponse
 from schemas.story_schema import CreateStoryRequest
 from controllers.story_controller import StoryController, get_session_id
 from dependencies import get_story_controller
+from utils.constants import StatusCode
 
-
-# Module level — created once on app startup, not on every request
 router = APIRouter()
 
 
-@router.post("/create", status_code=202)
+@router.post("/create", status_code=StatusCode.ACCEPTED)
 def create_story(
     request: CreateStoryRequest,
     background_tasks: BackgroundTasks,
@@ -27,7 +26,7 @@ def create_story(
     )
 
 
-@router.get("/{story_id}/complete", status_code=200)
+@router.get("/{story_id}/complete", status_code=StatusCode.OK)
 def get_complete_story(
     story_id: int,
     controller: StoryController = Depends(get_story_controller),

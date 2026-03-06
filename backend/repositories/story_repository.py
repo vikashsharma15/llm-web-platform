@@ -16,7 +16,7 @@ class StoryRepository:
 
     def get_story_by_theme(self, theme: str) -> Story | None:
         """Checks if a story already exists for this theme.
-        Pointer #11 — avoids redundant LLM calls by reusing existing stories."""
+            avoids redundant LLM calls by reusing existing stories."""
         return self.db.query(Story).filter(Story.theme == theme).first()
 
     def get_nodes_by_story_id(self, story_id: int) -> list[StoryNode]:

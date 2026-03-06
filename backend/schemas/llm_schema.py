@@ -24,7 +24,7 @@ class StoryNodeLLM(BaseModel):
 class StoryLLMResponse(BaseModel):
     """
     Top-level schema for parsing LLM story response.
-    Pointer #10 — separate from SQLAlchemy models — only used to parse OpenAI/Groq output.
+    separate from SQLAlchemy models — only used to parse OpenAI/Groq output.
     """
 
     title: str = Field(description="The title of the story")
