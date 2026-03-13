@@ -1,18 +1,32 @@
 import logging
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, DeclarativeBase
+
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import DeclarativeBase
+
 from core.config import get_settings
 
-logger = logging.getLogger(__name__)
-
+logger   = logging.getLogger(__name__)
 settings = get_settings()
 
-# Engine created from DATABASE_URL in .env — never hardcoded
-engine = create_engine(settings.DATABASE_URL)
 
-# Session factory — autocommit off, manual commit required
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Async engine — DATABASE_URL must use async driver
+# SQLite:     sqlite+aiosqlite:///./database.db
+# PostgreSQL: postgresql+asyncpg://user:pass@host/db
+engine = create_async_engine(
+    settings.DATABASE_URL,
+    echo=False,
+    pool_pre_ping=True,  # auto-reconnect on stale connections
+)
+
+# Async session factory
+AsyncSessionLocal = async_sessionmaker(
+    bind=engine,
+    class_=AsyncSession,
+    autocommit=False,
+    autoflush=False,
+    expire_on_commit=False,  # avoid lazy load errors after commit
+)
 
 
 class Base(DeclarativeBase):
@@ -20,26 +34,25 @@ class Base(DeclarativeBase):
     pass
 
 
-def get_db():
+async def get_db() -> AsyncSession:
     """
-    FastAPI dependency — provides DB session per request.
-    rolls back on error, always closes session.
+    FastAPI dependency — provides async DB session per request.
+    Rolls back on error, always closes session.
     """
-    db = SessionLocal()
-    try:
-        yield db
-    except SQLAlchemyError as e:
-        logger.error(f"DB session error: {e}")
-        db.rollback()
-        raise
-    finally:
-        db.close()
+    async with AsyncSessionLocal() as db:
+        try:
+            yield db
+        except SQLAlchemyError as e:
+            logger.error(f"DB session error: {e}")
+            await db.rollback()
+            raise
 
 
-def create_tables() -> None:
+async def create_tables() -> None:
     """Creates all tables on app startup — runs once via main.py."""
     try:
-        Base.metadata.create_all(bind=engine)
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
         logger.info("Database tables created successfully")
     except SQLAlchemyError as e:
         logger.error(f"Failed to create tables: {e}")

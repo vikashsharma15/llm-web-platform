@@ -1,35 +1,48 @@
-from sqlalchemy.orm import Session
+import logging
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import selectinload
 
 from models.story import Story, StoryNode
 
+logger = logging.getLogger(__name__)
+
 
 class StoryRepository:
-    """Handles all DB operations for Story and StoryNode models."""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
-    def get_story_by_id(self, story_id: int) -> Story | None:
-        """Fetches story by primary key — returns None if not found."""
-        return self.db.query(Story).filter(Story.id == story_id).first()
+    async def get_story_by_id(self, story_id: int) -> Story | None:
+        result = await self.db.execute(
+            select(Story)
+            .where(Story.id == story_id)
+            .options(selectinload(Story.nodes))   # ← eager load nodes, avoid N+1
+        )
+        return result.scalar_one_or_none()
 
-    def get_story_by_theme(self, theme: str) -> Story | None:
-        """Checks if a story already exists for this theme.
-            avoids redundant LLM calls by reusing existing stories."""
-        return self.db.query(Story).filter(Story.theme == theme).first()
+    async def get_story_by_theme(self, theme: str) -> Story | None:
+        """Cache check — reuse existing story, skip LLM."""
+        result = await self.db.execute(
+            select(Story).where(Story.theme == theme)
+        )
+        return result.scalar_one_or_none()
 
-    def get_nodes_by_story_id(self, story_id: int) -> list[StoryNode]:
-        """Fetches all nodes belonging to a story."""
-        return self.db.query(StoryNode).filter(StoryNode.story_id == story_id).all()
+    async def get_stories_by_user(self, user_id: int) -> list[Story]:
+        result = await self.db.execute(
+            select(Story)
+            .where(Story.user_id == user_id)
+            .order_by(Story.created_at.desc())
+        )
+        return result.scalars().all()
 
-    def create_story(self, story: Story) -> Story:
-        """Inserts a new story record into DB."""
+    async def create_story(self, story: Story) -> Story:
         try:
             self.db.add(story)
-            self.db.commit()
-            self.db.refresh(story)
+            await self.db.commit()
+            await self.db.refresh(story)
             return story
         except SQLAlchemyError:
-            self.db.rollback()
+            await self.db.rollback()
             raise

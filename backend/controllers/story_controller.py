@@ -1,64 +1,50 @@
-import uuid
-import logging
-
 from fastapi import BackgroundTasks
 from fastapi.responses import JSONResponse
 
+from models.user import User
 from schemas.story_schema import CreateStoryRequest
-from schemas.job_schema import StoryJobResponse
 from services.job_service import JobService
 from services.story_service import StoryService
+from utils.constants import Messages, StatusCode
 from utils.response_helper import success_response
-from utils.constants import StatusCode, Messages
-
-logger = logging.getLogger(__name__)
 
 
 class StoryController:
-    """Handles HTTP request/response logic for story-related endpoints."""
+    """HTTP layer only — request/response, no business logic."""
 
-    def __init__(self, job_service: JobService, story_service: StoryService):
-        """Injects JobService and StoryService via dependency injection."""
-        self.job_service = job_service
+    def __init__(self, job_service: JobService, story_service: StoryService) -> None:
+        self.job_service   = job_service
         self.story_service = story_service
 
-    def create_story(
+    async def create_story(
         self,
-        request: CreateStoryRequest,
+        request:          CreateStoryRequest,
         background_tasks: BackgroundTasks,
+        current_user:     User,
     ) -> JSONResponse:
-        """
-        Creates a story job and queues LLM generation in background.
-        Returns 202 immediately — client polls job status for completion.
-        session_id generated server-side — never exposed to client.
-        """
-        # Server generates session_id — user never sees or manages this
-        session_id = str(uuid.uuid4())
-
-        job = self.job_service.create_job(
+        data = await self.job_service.create_job(   # ← dict ab service se aayega
             theme=request.theme,
-            session_id=session_id,
+            user_id=current_user.id,
         )
 
-        # Queue LLM story generation — request returns immediately
         background_tasks.add_task(
             self.job_service.process_story_job,
-            job_id=job.job_id,
+            job_id=data["job_id"],                  # ← dict access, not data.job_id
             theme=request.theme,
-            session_id=session_id,
+            user_id=current_user.id,
         )
 
         return success_response(
             status_code=StatusCode.ACCEPTED,
             message=Messages.JOB_ACCEPTED,
-            data=StoryJobResponse.model_validate(job).model_dump(mode="json"),
+            data=data,                              # ← plain dict, no model_validate
         )
 
-    def get_complete_story(self, story_id: int) -> JSONResponse:
-        """Fetches a complete story with all nodes by story ID."""
-        story = self.story_service.get_complete_story(story_id)
+    async def get_complete_story(self, story_id: int, current_user: User) -> JSONResponse:
+        data = await self.story_service.get_complete_story(story_id, current_user.id)
+
         return success_response(
             status_code=StatusCode.OK,
             message=Messages.STORY_FETCHED,
-            data=story.model_dump(mode="json"),
+            data=data,                              # ← data, not undefined `story`
         )

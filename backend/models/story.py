@@ -1,34 +1,33 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, JSON
+from sqlalchemy import Column, ForeignKey, Integer, String, Boolean, DateTime, JSON
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from db.database import Base
 
 
 class Story(Base):
-    """Represents a generated story — parent of all story nodes."""
-
     __tablename__ = "stories"
 
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, index=True)                     # LLM generated story title
-    theme = Column(String, index=True)                     # used for cache lookup 
-    session_id = Column(String, index=True)                # links story to user session
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    id         = Column(Integer, primary_key=True, index=True)
+    user_id    = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)  # ← ADD THIS
+    title      = Column(String, nullable=False)
+    theme      = Column(String, nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    nodes = relationship("StoryNode", back_populates="story")
+    # session_id — REMOVE THIS LINE if it's still there
+
+    nodes = relationship("StoryNode", back_populates="story", lazy="selectin")
+    user  = relationship("User", back_populates="stories")
 
 
 class StoryNode(Base):
-    """Represents a single node in the story tree — content + choices."""
-
     __tablename__ = "story_nodes"
 
-    id = Column(Integer, primary_key=True, index=True)
-    story_id = Column(Integer, ForeignKey("stories.id"), index=True)
-    content = Column(String)                              
-    is_root = Column(Boolean, default=False)               
-    is_ending = Column(Boolean, default=False)            
-    is_winning_ending = Column(Boolean, default=False)     
-    options = Column(JSON, default=list)                  
+    id                = Column(Integer, primary_key=True, index=True)
+    story_id          = Column(Integer, ForeignKey("stories.id"), nullable=False, index=True)
+    content           = Column(String, nullable=False)
+    is_root           = Column(Boolean, default=False, nullable=False)
+    is_ending         = Column(Boolean, default=False, nullable=False)
+    is_winning_ending = Column(Boolean, default=False, nullable=False)
+    options           = Column(JSON, default=list, nullable=False)
 
     story = relationship("Story", back_populates="nodes")
